@@ -47,6 +47,7 @@ function createProxyFetch() {
       const body = response.body ? await response.arrayBuffer() : null;
       // Convert undici Headers to standard Headers
       const headers = new Headers();
+      // @ts-ignore - undici headers type compatibility
       response.headers.forEach((value: string, key: string) => {
         headers.set(key, value);
       });
