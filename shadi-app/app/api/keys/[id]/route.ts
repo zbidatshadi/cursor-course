@@ -162,6 +162,7 @@ export async function PUT(
     console.log('Updating with data:', updateData);
 
     // Optimize update: select only needed columns
+    // @ts-ignore - Supabase type inference issue with update
     const { data, error } = await supabase
       .from('api_keys')
       .update(updateData as any)
