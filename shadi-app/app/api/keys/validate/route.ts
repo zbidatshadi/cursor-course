@@ -17,10 +17,22 @@ function createProxyFetch() {
       const { fetch: undiciFetch } = await import('undici');
       const urlString = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
       
-      return undiciFetch(urlString, {
+      const response = await undiciFetch(urlString, {
         ...init,
         dispatcher: agent,
       } as any);
+      // Convert undici Response to standard Response by getting the body as arrayBuffer
+      const body = response.body ? await response.arrayBuffer() : null;
+      // Convert undici Headers to standard Headers
+      const headers = new Headers();
+      response.headers.forEach((value, key) => {
+        headers.set(key, value);
+      });
+      return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: headers,
+      });
     } catch (error: any) {
       if (error.code === 'ENOTFOUND' || error.message?.includes('getaddrinfo')) {
         throw new Error(
