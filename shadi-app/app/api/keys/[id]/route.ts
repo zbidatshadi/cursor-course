@@ -164,7 +164,7 @@ export async function PUT(
     // Optimize update: select only needed columns
     const { data, error } = await supabase
       .from('api_keys')
-      .update(updateData)
+      .update(updateData as any)
       .eq('id', id)
       .select('id, name, type, key, usage, created_at, limit')
       .single();
