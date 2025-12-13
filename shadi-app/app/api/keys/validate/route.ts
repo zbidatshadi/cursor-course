@@ -2,22 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ProxyAgent } from 'undici';
 
+// Cache undici import to avoid dynamic import overhead
+let undiciFetch: any = null;
+const getUndiciFetch = async () => {
+  if (!undiciFetch) {
+    const undici = await import('undici');
+    undiciFetch = undici.fetch;
+  }
+  return undiciFetch;
+};
+
+// Cache proxy fetch function to avoid recreating it on every request
+let cachedProxyFetch: ((url: string | URL | Request, init?: RequestInit) => Promise<Response>) | null = null;
+
 // Create a proxy-aware fetch function
 function createProxyFetch() {
+  // Return cached version if available
+  if (cachedProxyFetch) {
+    return cachedProxyFetch;
+  }
+
   const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy;
   
   if (!proxyUrl) {
-    return fetch;
+    // No proxy, use default fetch
+    cachedProxyFetch = fetch;
+    return cachedProxyFetch;
   }
 
+  // Create a ProxyAgent for undici - this should handle CONNECT and bypass DNS
   const agent = new ProxyAgent(proxyUrl);
 
-  return async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  // Return a custom fetch that uses the proxy agent
+  cachedProxyFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     try {
-      const { fetch: undiciFetch } = await import('undici');
+      const fetchFn = await getUndiciFetch();
       const urlString = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
       
-      const response = await undiciFetch(urlString, {
+      const response = await fetchFn(urlString, {
         ...init,
         dispatcher: agent,
       } as any);
@@ -25,7 +47,7 @@ function createProxyFetch() {
       const body = response.body ? await response.arrayBuffer() : null;
       // Convert undici Headers to standard Headers
       const headers = new Headers();
-      response.headers.forEach((value, key) => {
+      response.headers.forEach((value: string, key: string) => {
         headers.set(key, value);
       });
       return new Response(body, {
@@ -43,9 +65,19 @@ function createProxyFetch() {
       throw error;
     }
   };
+  
+  return cachedProxyFetch;
 }
 
+// Cache Supabase client to avoid recreating it on every request
+let cachedSupabaseClient: ReturnType<typeof createClient> | null = null;
+
 function getSupabaseClient() {
+  // Return cached client if available
+  if (cachedSupabaseClient) {
+    return cachedSupabaseClient;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -61,7 +93,7 @@ function getSupabaseClient() {
 
   const proxyFetch = createProxyFetch();
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  cachedSupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
     },
@@ -69,6 +101,30 @@ function getSupabaseClient() {
       fetch: proxyFetch,
     },
   });
+
+  return cachedSupabaseClient;
+}
+
+// Helper function to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
+// CORS headers helper
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request for CORS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
 }
 
 // POST - Validate API key
@@ -81,11 +137,12 @@ export async function POST(request: NextRequest) {
     if (!key) {
       return NextResponse.json(
         { error: 'API key is required', valid: false },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     // Query the database to check if the API key exists
+    // Optimize: select only needed columns
     const { data, error } = await supabase
       .from('api_keys')
       .select('id, name, type, key, usage, limit')
@@ -97,34 +154,49 @@ export async function POST(request: NextRequest) {
       if (error.code === 'PGRST116') {
         return NextResponse.json(
           { valid: false, message: 'Invalid API key' },
-          { status: 200 }
+          { status: 200, headers: corsHeaders }
+        );
+      }
+      
+      // Handle RLS/permission errors
+      if (error.code === '42501' || error.message.includes('permission denied') || error.message.includes('RLS') || error.message.includes('policy')) {
+        console.error('Supabase RLS error:', error);
+        return NextResponse.json(
+          { 
+            error: 'Permission denied by Row Level Security (RLS).',
+            details: 'Please check your RLS policies in Supabase. The table exists but access is blocked.',
+            hint: 'Go to Authentication > Policies in Supabase and ensure there is a policy allowing SELECT operations on api_keys table.',
+            code: error.code,
+            valid: false
+          },
+          { status: 403, headers: corsHeaders }
         );
       }
       
       console.error('Supabase error:', error);
       return NextResponse.json(
         { error: `Database error: ${error.message}`, valid: false },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
     if (data) {
       return NextResponse.json(
         { valid: true, message: 'Valid API key', keyData: data },
-        { status: 200 }
+        { status: 200, headers: corsHeaders }
       );
     }
 
     return NextResponse.json(
       { valid: false, message: 'Invalid API key' },
-      { status: 200 }
+      { status: 200, headers: corsHeaders }
     );
   } catch (error) {
     console.error('Error validating API key:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to validate API key';
     return NextResponse.json(
       { error: errorMessage, valid: false },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

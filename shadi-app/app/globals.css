@@ -81,3 +81,8 @@ body {
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+nextjs-portal {
+  left: unset;
+  top: unset;
+}

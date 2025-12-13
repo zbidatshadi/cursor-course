@@ -47,7 +47,7 @@ function createProxyFetch() {
       const body = response.body ? await response.arrayBuffer() : null;
       // Convert undici Headers to standard Headers
       const headers = new Headers();
-      response.headers.forEach((value, key) => {
+      response.headers.forEach((value: string, key: string) => {
         headers.set(key, value);
       });
       return new Response(body, {
@@ -85,7 +85,6 @@ function getSupabaseClient() {
     throw new Error('Missing Supabase environment variables. Please check your .env.local file.');
   }
 
-  // Validate URL format
   try {
     new URL(supabaseUrl);
   } catch {
@@ -106,122 +105,89 @@ function getSupabaseClient() {
   return cachedSupabaseClient;
 }
 
-// Helper function to add timeout to promises
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
-    ),
-  ]);
+// CORS headers helper
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request for CORS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
 }
 
-// PUT - Update an API key
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// POST - Validate API key
+export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
-    const { id } = await params;
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Missing API key ID' },
-        { status: 400 }
-      );
-    }
     const body = await request.json();
-    const { name, type, key } = body;
+    const { key } = body;
 
-    console.log('PUT request received:', { id, name, type, key });
-
-    if (!name || !type || !key) {
+    if (!key) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, type, key' },
-        { status: 400 }
+        { error: 'API key is required', valid: false },
+        { status: 400, headers: corsHeaders }
       );
     }
 
-    // Validate type
-    if (type !== 'dev' && type !== 'prod') {
-      return NextResponse.json(
-        { error: 'Type must be either "dev" or "prod"' },
-        { status: 400 }
-      );
-    }
-
-    const updateData = {
-      name,
-      type,
-      key,
-      updated_at: new Date().toISOString(),
-    };
-
-    console.log('Updating with data:', updateData);
-
-    // Optimize update: select only needed columns
+    // Query the database to check if the API key exists
+    // Optimize: select only needed columns
     const { data, error } = await supabase
       .from('api_keys')
-      .update(updateData)
-      .eq('id', id)
-      .select('id, name, type, key, usage, created_at, limit')
+      .select('id, name, type, key, usage, limit')
+      .eq('key', key)
       .single();
 
     if (error) {
+      // If no rows found, the key is invalid
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { valid: false, message: 'Invalid API key' },
+          { status: 200, headers: corsHeaders }
+        );
+      }
+      
+      // Handle RLS/permission errors
+      if (error.code === '42501' || error.message.includes('permission denied') || error.message.includes('RLS') || error.message.includes('policy')) {
+        console.error('Supabase RLS error:', error);
+        return NextResponse.json(
+          { 
+            error: 'Permission denied by Row Level Security (RLS).',
+            details: 'Please check your RLS policies in Supabase. The table exists but access is blocked.',
+            hint: 'Go to Authentication > Policies in Supabase and ensure there is a policy allowing SELECT operations on api_keys table.',
+            code: error.code,
+            valid: false
+          },
+          { status: 403, headers: corsHeaders }
+        );
+      }
+      
       console.error('Supabase error:', error);
       return NextResponse.json(
-        { error: `Database error: ${error.message}` },
-        { status: 500 }
+        { error: `Database error: ${error.message}`, valid: false },
+        { status: 500, headers: corsHeaders }
       );
     }
 
-    if (!data) {
+    if (data) {
       return NextResponse.json(
-        { error: 'API key not found' },
-        { status: 404 }
+        { valid: true, message: 'Valid API key', keyData: data },
+        { status: 200, headers: corsHeaders }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(
+      { valid: false, message: 'Invalid API key' },
+      { status: 200, headers: corsHeaders }
+    );
   } catch (error) {
-    console.error('Error updating API key:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to update API key';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
-}
-
-// DELETE - Delete an API key
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const supabase = getSupabaseClient();
-    const { id } = await params;
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Missing API key ID' },
-        { status: 400 }
-      );
-    }
-
-    const { error } = await supabase.from('api_keys').delete().eq('id', id);
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json(
-        { error: `Database error: ${error.message}` },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting API key:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to delete API key';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    console.error('Error validating API key:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to validate API key';
+    return NextResponse.json(
+      { error: errorMessage, valid: false },
+      { status: 500, headers: corsHeaders }
+    );
   }
 }
 

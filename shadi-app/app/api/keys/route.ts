@@ -2,26 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ProxyAgent } from 'undici';
 
+// Cache undici import to avoid dynamic import overhead
+let undiciFetch: any = null;
+const getUndiciFetch = async () => {
+  if (!undiciFetch) {
+    const undici = await import('undici');
+    undiciFetch = undici.fetch;
+  }
+  return undiciFetch;
+};
+
+// Cache proxy fetch function to avoid recreating it on every request
+let cachedProxyFetch: ((url: string | URL | Request, init?: RequestInit) => Promise<Response>) | null = null;
+
 // Create a proxy-aware fetch function
 function createProxyFetch() {
+  // Return cached version if available
+  if (cachedProxyFetch) {
+    return cachedProxyFetch;
+  }
+
   const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy;
   
   if (!proxyUrl) {
     // No proxy, use default fetch
-    return fetch;
+    cachedProxyFetch = fetch;
+    return cachedProxyFetch;
   }
 
   // Create a ProxyAgent for undici - this should handle CONNECT and bypass DNS
   const agent = new ProxyAgent(proxyUrl);
 
   // Return a custom fetch that uses the proxy agent
-  // The ProxyAgent should use HTTP CONNECT which doesn't require DNS resolution
-  return async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  cachedProxyFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     try {
-      const { fetch: undiciFetch } = await import('undici');
+      const fetchFn = await getUndiciFetch();
       const urlString = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
       
-      const response = await undiciFetch(urlString, {
+      const response = await fetchFn(urlString, {
         ...init,
         dispatcher: agent,
       } as any);
@@ -29,7 +47,7 @@ function createProxyFetch() {
       const body = response.body ? await response.arrayBuffer() : null;
       // Convert undici Headers to standard Headers
       const headers = new Headers();
-      response.headers.forEach((value, key) => {
+      response.headers.forEach((value: string, key: string) => {
         headers.set(key, value);
       });
       return new Response(body, {
@@ -48,9 +66,19 @@ function createProxyFetch() {
       throw error;
     }
   };
+  
+  return cachedProxyFetch;
 }
 
+// Cache Supabase client to avoid recreating it on every request
+let cachedSupabaseClient: ReturnType<typeof createClient> | null = null;
+
 function getSupabaseClient() {
+  // Return cached client if available
+  if (cachedSupabaseClient) {
+    return cachedSupabaseClient;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -67,7 +95,7 @@ function getSupabaseClient() {
 
   const proxyFetch = createProxyFetch();
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  cachedSupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
     },
@@ -75,6 +103,18 @@ function getSupabaseClient() {
       fetch: proxyFetch,
     },
   });
+
+  return cachedSupabaseClient;
+}
+
+// Helper function to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
 }
 
 // GET - Fetch all API keys
@@ -112,10 +152,10 @@ export async function GET() {
       );
     }
     
-    // Add timeout and better error handling for the Supabase query
+    // Optimize query: select only needed columns (reduces data transfer)
     const { data, error } = await supabase
       .from('api_keys')
-      .select('*')
+      .select('id, name, type, key, usage, created_at, limit')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -155,7 +195,12 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(data || []);
+    // Add caching headers for GET requests
+    return NextResponse.json(data || [], {
+      headers: {
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+      },
+    });
   } catch (error) {
     console.error('Error fetching API keys:', error);
     
@@ -224,6 +269,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Optimize insert: select only needed columns
     const { data, error } = await supabase
       .from('api_keys')
       .insert([
@@ -235,8 +281,8 @@ export async function POST(request: NextRequest) {
           limit: limit || null,
           created_at: new Date().toISOString(),
         },
-      ])
-      .select()
+      ] as any)
+      .select('id, name, type, key, usage, created_at, limit')
       .single();
 
     if (error) {
