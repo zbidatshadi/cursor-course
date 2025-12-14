@@ -49,6 +49,48 @@ README.md content:
 );
 
 /**
+ * Helper function to split a large paragraph into sentence chunks
+ */
+function splitParagraphIntoSentences(paragraph: string, maxChunkSize: number): string[] {
+  const sentenceChunks: string[] = [];
+  const sentences = paragraph.split(/(?<=[.!?])\s+/);
+  let sentenceChunk = '';
+  
+  for (const sentence of sentences) {
+    if (sentenceChunk.length + sentence.length + 1 <= maxChunkSize) {
+      sentenceChunk += (sentenceChunk ? ' ' : '') + sentence;
+    } else {
+      if (sentenceChunk) {
+        sentenceChunks.push(sentenceChunk);
+      }
+      sentenceChunk = sentence;
+    }
+  }
+  
+  if (sentenceChunk) {
+    sentenceChunks.push(sentenceChunk);
+  }
+  
+  return sentenceChunks;
+}
+
+/**
+ * Helper function to process a paragraph that's too large
+ */
+function processLargeParagraph(
+  paragraph: string,
+  maxChunkSize: number,
+  chunks: string[]
+): string {
+  if (paragraph.length > maxChunkSize) {
+    const sentenceChunks = splitParagraphIntoSentences(paragraph, maxChunkSize);
+    chunks.push(...sentenceChunks.slice(0, -1));
+    return sentenceChunks.at(-1) || '';
+  }
+  return paragraph;
+}
+
+/**
  * Helper function to chunk large text into smaller pieces
  * Splits text at sentence boundaries to avoid breaking context
  */
@@ -59,33 +101,18 @@ function chunkText(text: string, maxChunkSize: number = 100000): string[] {
 
   const chunks: string[] = [];
   let currentChunk = '';
-  
-  // Split by paragraphs first, then by sentences if needed
   const paragraphs = text.split(/\n\s*\n/);
   
   for (const paragraph of paragraphs) {
-    if (currentChunk.length + paragraph.length + 2 <= maxChunkSize) {
-      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
-    } else {
+    const wouldExceedLimit = currentChunk.length + paragraph.length + 2 > maxChunkSize;
+    
+    if (wouldExceedLimit) {
       if (currentChunk) {
         chunks.push(currentChunk);
       }
-      // If single paragraph is too large, split by sentences
-      if (paragraph.length > maxChunkSize) {
-        const sentences = paragraph.split(/(?<=[.!?])\s+/);
-        let sentenceChunk = '';
-        for (const sentence of sentences) {
-          if (sentenceChunk.length + sentence.length + 1 <= maxChunkSize) {
-            sentenceChunk += (sentenceChunk ? ' ' : '') + sentence;
-          } else {
-            if (sentenceChunk) chunks.push(sentenceChunk);
-            sentenceChunk = sentence;
-          }
-        }
-        if (sentenceChunk) currentChunk = sentenceChunk;
-      } else {
-        currentChunk = paragraph;
-      }
+      currentChunk = processLargeParagraph(paragraph, maxChunkSize, chunks);
+    } else {
+      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
     }
   }
   
@@ -163,9 +190,13 @@ export async function summarizeWithGemini(
 
     // Chunk large inputs to avoid timeout issues
     const chunks = chunkText(readmeContent, 100000); // 100k chars per chunk
-    const contentToProcess = chunks.length > 1 
-      ? chunks[0] + (chunks.length > 1 ? `\n\n[... ${chunks.length - 1} more sections truncated for processing ...]` : '')
-      : readmeContent;
+    let contentToProcess: string;
+    if (chunks.length > 1) {
+      const truncatedMessage = `\n\n[... ${chunks.length - 1} more sections truncated for processing ...]`;
+      contentToProcess = chunks[0] + truncatedMessage;
+    } else {
+      contentToProcess = readmeContent;
+    }
 
     // Configure LLM with optimizations
     const llmConfig: any = {
@@ -182,8 +213,9 @@ export async function summarizeWithGemini(
     }
 
     const llm = new ChatGoogleGenerativeAI(llmConfig);
-
     const prompt = createPrompt();
+    
+    // Bind withStructuredOutput to the model for structured JSON output
     const structuredLlm = llm.withStructuredOutput(summarySchema);
 
     const chain = RunnableSequence.from([
@@ -226,58 +258,7 @@ export async function summarizeWithGemini(
 }
 
 /**
- * OPTION 2: Anthropic Claude
- * Get API key from: https://console.anthropic.com/
- * Note: Requires @langchain/anthropic package to be installed
- * Install with: npm install @langchain/anthropic --legacy-peer-deps
- */
-export async function summarizeWithClaude(
-  readmeContent: string,
-  proxyFetch?: ProxyFetchFunction
-) {
-  // Use variable-based import path to prevent webpack static analysis
-  const langchainPkg = "@langchain";
-  const anthropicPkg = "/anthropic";
-  const modulePath = langchainPkg + anthropicPkg;
-  
-  try {
-    // @ts-ignore - dynamic import path
-    const module = await import(modulePath);
-    const { ChatAnthropic } = module;
-    
-    const llmConfig: any = {
-      modelName: "claude-3-haiku-20240307", // Cheaper option
-      temperature: 0,
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-    };
-
-    if (proxyFetch) {
-      llmConfig.fetch = proxyFetch;
-    }
-
-    const llm = new ChatAnthropic(llmConfig);
-    const prompt = createPrompt();
-    const structuredLlm = llm.withStructuredOutput(summarySchema);
-
-    const chain = RunnableSequence.from([
-      (text: string) => ({ readme_content: text }),
-      prompt,
-      structuredLlm,
-    ]);
-
-    return await chain.invoke(readmeContent);
-  } catch (error: any) {
-    if (error.code === 'MODULE_NOT_FOUND' || error.message?.includes("Can't resolve") || error.message?.includes("Cannot find module")) {
-      // Fallback to extraction if package not installed
-      console.warn("Anthropic Claude package not installed. Falling back to extraction method.");
-      return summarizeWithExtraction(readmeContent);
-    }
-    throw error;
-  }
-}
-
-/**
- * OPTION 3: Hugging Face (Free tier available)
+ * OPTION 2: Hugging Face (Free tier available)
  * Get API key from: https://huggingface.co/settings/tokens
  * Note: Requires @langchain/community package to be installed
  */
@@ -303,24 +284,45 @@ export async function summarizeWithHuggingFace(
     });
 
     const prompt = createPrompt();
-    const formattedPrompt = await prompt.format({ readme_content: readmeContent });
     
-    const response = await llm.invoke(formattedPrompt);
-    
-    // Parse JSON response
+    // Try to use withStructuredOutput if supported, otherwise fall back to manual parsing
+    let structuredLlm;
     try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return summarySchema.parse(parsed);
+      // Bind withStructuredOutput to the model for structured JSON output
+      structuredLlm = llm.withStructuredOutput(summarySchema);
+      
+      const chain = RunnableSequence.from([
+        (text: string) => ({ readme_content: text }),
+        prompt,
+        structuredLlm,
+      ]);
+      
+      return await chain.invoke(readmeContent);
+    } catch (error: any) {
+      // If withStructuredOutput is not supported, fall back to manual parsing
+      console.warn("withStructuredOutput not supported for HuggingFace, using manual parsing:", error.message);
+      
+      const formattedPrompt = await prompt.format({ readme_content: readmeContent });
+      const response = await llm.invoke(formattedPrompt);
+      
+      // Parse JSON response
+      try {
+        const jsonRegex = /\{[\s\S]*\}/;
+        const jsonMatch = jsonRegex.exec(response);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return summarySchema.parse(parsed);
+        }
+        throw new Error("No JSON found in response");
+      } catch (parseError: unknown) {
+        // Fallback: create a simple summary
+        const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
+        console.warn("Failed to parse HuggingFace response:", errorMessage);
+        return {
+          summary: response.substring(0, 500),
+          cool_facts: ["Generated using Hugging Face model"]
+        };
       }
-      throw new Error("No JSON found in response");
-    } catch (error) {
-      // Fallback: create a simple summary
-      return {
-        summary: response.substring(0, 500),
-        cool_facts: ["Generated using Hugging Face model"]
-      };
     }
   } catch (error: any) {
     if (error.code === 'MODULE_NOT_FOUND' || error.message?.includes("Can't resolve") || error.message?.includes("Cannot find module")) {
@@ -333,20 +335,23 @@ export async function summarizeWithHuggingFace(
 }
 
 /**
- * OPTION 4: Simple Text Extraction (No AI, Free)
+ * OPTION 3: Simple Text Extraction (No AI, Free)
  * Extracts key information from README without using AI
  */
 export function summarizeWithExtraction(readmeContent: string) {
   // Extract title (usually first # heading)
-  const titleMatch = readmeContent.match(/^#\s+(.+)$/m);
+  const titleRegex = /^#\s+(.+)$/m;
+  const titleMatch = titleRegex.exec(readmeContent);
   const title = titleMatch ? titleMatch[1] : "Project";
 
   // Extract description (usually after title or in first paragraph)
-  const descriptionMatch = readmeContent.match(/(?:^#\s+.+\n\n)([\s\S]+?)(?:\n\n|$)/);
+  const descriptionRegex = /(?:^#\s+.+\n\n)([\s\S]+?)(?:\n\n|$)/;
+  const descriptionMatch = descriptionRegex.exec(readmeContent);
   const description = descriptionMatch ? descriptionMatch[1].trim().substring(0, 300) : "";
 
   // Extract features (look for ## Features or - list items)
-  const featuresSection = readmeContent.match(/##\s+Features?\s*\n([\s\S]*?)(?=\n##|$)/i);
+  const featuresRegex = /##\s+Features?\s*\n([\s\S]*?)(?=\n##|$)/i;
+  const featuresSection = featuresRegex.exec(readmeContent);
   const featuresList = featuresSection 
     ? featuresSection[1].match(/[-*]\s+(.+)/g)?.map(f => f.replace(/[-*]\s+/, "")) || []
     : [];
@@ -356,7 +361,12 @@ export function summarizeWithExtraction(readmeContent: string) {
   const techStack = readmeContent.match(/\[.*?\]\(.*?\)/g)?.slice(0, 5) || [];
 
   // Create summary
-  const summary = `${title}${description ? `: ${description}` : ""}${featuresList.length > 0 ? ` Key features include ${featuresList.slice(0, 3).join(", ")}.` : ""}`;
+  const titlePart = title;
+  const descriptionPart = description ? `: ${description}` : "";
+  const featuresPart = featuresList.length > 0 
+    ? ` Key features include ${featuresList.slice(0, 3).join(", ")}.` 
+    : "";
+  const summary = `${titlePart}${descriptionPart}${featuresPart}`;
 
   // Create cool facts
   const coolFacts: string[] = [];
@@ -406,14 +416,6 @@ export async function summarizeReadme(
         return summarizeWithExtraction(readmeContent);
       }
       return await summarizeWithGemini(readmeContent, proxyFetch);
-    
-    case "claude":
-    case "anthropic":
-      if (!process.env.ANTHROPIC_API_KEY) {
-        console.warn("ANTHROPIC_API_KEY environment variable is not set. Falling back to extraction method.");
-        return summarizeWithExtraction(readmeContent);
-      }
-      return await summarizeWithClaude(readmeContent, proxyFetch);
     
     case "huggingface":
     case "hf":
