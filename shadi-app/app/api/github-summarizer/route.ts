@@ -40,9 +40,9 @@ function createProxyFetch() {
 
   // Return a custom fetch that uses the proxy agent
   cachedProxyFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    let urlString: string = '';
     try {
       const fetchFn = await getUndiciFetch();
-      let urlString: string;
       if (typeof url === 'string') {
         urlString = url;
       } else if (url instanceof URL) {
@@ -54,6 +54,8 @@ function createProxyFetch() {
       const response = await fetchFn(urlString, {
         ...init,
         dispatcher: agent,
+        redirect: 'follow',
+        maxRedirections: 3, // Limit redirects to prevent loops (reduced from 5)
       } as any);
       // Convert undici Response to standard Response by getting the body as arrayBuffer
       const body = response.body ? await response.arrayBuffer() : null;
@@ -68,6 +70,13 @@ function createProxyFetch() {
         headers: headers,
       });
     } catch (error: any) {
+      // Handle redirect loop errors
+      if (error.message?.includes('maxRedirects') || error.message?.includes('redirect loop')) {
+        throw new Error(
+          `Redirect loop detected when fetching ${urlString || 'unknown URL'}. This may be caused by proxy configuration or the target URL. ` +
+          `Original error: ${error.message}`
+        );
+      }
       if (error.code === 'ENOTFOUND' || error.message?.includes('getaddrinfo')) {
         throw new Error(
           `DNS resolution failed. The proxy (${proxyUrl}) should handle this via CONNECT method. ` +
