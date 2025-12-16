@@ -91,7 +91,7 @@ function HomeContent() {
                 Go to Dashboard
               </Link>
               <button
-                onClick={() => signOut()}
+                onClick={() => signOut({ callbackUrl: "/" })}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-red-600 px-5 text-white transition-colors hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 md:w-[158px]"
               >
                 Sign Out
