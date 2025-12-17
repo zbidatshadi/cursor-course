@@ -215,9 +215,9 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async redirect({ url, baseUrl }) {
-      // After sign in, redirect to dashboard
+      // After sign in, redirect to home page (unless specific callbackUrl is provided)
       if (url === baseUrl || url === `${baseUrl}/`) {
-        return `${baseUrl}/dashboard`;
+        return `${baseUrl}/`;
       }
       // Allow relative callback URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`;

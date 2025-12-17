@@ -46,10 +46,6 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this API key?')) {
-      return;
-    }
-
     try {
       const response = await fetch(`/api/keys/${id}`, {
         method: 'DELETE',
@@ -232,7 +228,7 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
                   NAME
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                  USAGE
+                  TYPE
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                   KEY
@@ -249,7 +245,7 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
                     <span className="text-sm text-zinc-900">{apiKey.name}</span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="text-sm text-zinc-900">{apiKey.usage}</span>
+                    <span className="text-sm text-zinc-900 uppercase">{apiKey.type}</span>
                   </td>
                   <td className="py-4 px-4">
                     <code className="text-sm font-mono text-zinc-900">
@@ -309,8 +305,14 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl animate-slide-in">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setIsModalOpen(false);
+            setFormData({ name: '', type: 'dev', key: '', limitMonthlyUsage: false, limit: 1000 });
+            setEditingKey(null);
+          }
+        }}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl animate-slide-in" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-zinc-900 mb-2">
               {editingKey ? 'Edit API Key' : 'Create a new API key'}
             </h2>
@@ -328,10 +330,29 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-zinc-900 bg-white"
                   placeholder="Key Name"
                   required
+                  autoFocus
+                  disabled={isSubmitting}
                 />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-zinc-900 mb-2">
+                  Type
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) =>
+                    setFormData({ ...formData, type: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-zinc-900 bg-white"
+                  disabled={isSubmitting}
+                >
+                  <option value="dev">dev</option>
+                  <option value="prod">prod</option>
+                </select>
               </div>
 
               {!editingKey && (
@@ -346,6 +367,7 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
                           setFormData({ ...formData, limitMonthlyUsage: e.target.checked })
                         }
                         className="w-4 h-4 text-blue-600 border-zinc-300 rounded focus:ring-blue-500"
+                        disabled={isSubmitting}
                       />
                       <label htmlFor="limitMonthlyUsage" className="text-sm font-medium text-zinc-900">
                         Limit monthly usage<span className="text-red-500">*</span>
@@ -358,9 +380,10 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
                         onChange={(e) =>
                           setFormData({ ...formData, limit: parseInt(e.target.value) || 1000 })
                         }
-                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-zinc-900 bg-white"
                         placeholder="1000"
                         min="1"
+                        disabled={isSubmitting}
                       />
                     )}
                   </div>
@@ -372,21 +395,6 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
 
               {editingKey && (
                 <>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-zinc-900 mb-2">
-                      Type
-                    </label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) =>
-                        setFormData({ ...formData, type: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="dev">dev</option>
-                      <option value="prod">prod</option>
-                    </select>
-                  </div>
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-zinc-900 mb-2">
                       API Key
@@ -398,9 +406,10 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
                         onChange={(e) =>
                           setFormData({ ...formData, key: e.target.value })
                         }
-                        className="flex-1 px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                        className="flex-1 px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm text-zinc-900 bg-white"
                         placeholder="Enter or generate API key"
                         required
+                        disabled={isSubmitting}
                       />
                       <button
                         type="button"
