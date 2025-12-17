@@ -24,21 +24,20 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       lg: "h-11 px-8 text-base",
     }
 
-    const Comp = asChild ? React.Fragment : "button"
-    const buttonProps = asChild ? {} : { ref, ...props }
-
     if (asChild && React.isValidElement(props.children)) {
-      return React.cloneElement(props.children, {
-        className: cn(baseStyles, variants[variant], sizes[size], className),
-        ...buttonProps,
-      })
+      const childElement = props.children as React.ReactElement<React.HTMLAttributes<HTMLElement> & { className?: string }>
+      const existingClassName = childElement.props?.className
+      return React.cloneElement(childElement, {
+        ...childElement.props,
+        className: cn(baseStyles, variants[variant], sizes[size], className, existingClassName),
+      } as React.HTMLAttributes<HTMLElement>)
     }
 
     return (
-      <Comp
+      <button
         ref={ref}
         className={cn(baseStyles, variants[variant], sizes[size], className)}
-        {...buttonProps}
+        {...props}
       />
     )
   }
