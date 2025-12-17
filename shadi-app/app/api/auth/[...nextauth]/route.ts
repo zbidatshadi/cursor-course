@@ -40,6 +40,17 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
+    async redirect({ url, baseUrl }) {
+      // After sign in, redirect to dashboard
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/dashboard`;
+      }
+      // Allow relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allow callback URLs on the same origin
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
   },
   pages: {
     signIn: "/",

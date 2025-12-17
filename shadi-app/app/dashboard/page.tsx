@@ -130,10 +130,6 @@ export default function Dashboard() {
                 </div>
             </div>
             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-sm text-zinc-600 bg-white px-3 py-1.5 rounded-lg border border-zinc-200 shadow-sm">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Operational</span>
-              </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
