@@ -172,6 +172,8 @@ nextjs-portal {
     body {
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      /* Override gradient background for dashboard pages on mobile */
+      background: rgb(250 250 250) !important;
     }
   }
   
