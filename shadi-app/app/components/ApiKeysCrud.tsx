@@ -30,10 +30,25 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
 
   useEffect(() => {
     if (isModalOpen && dialogRef.current) {
-      dialogRef.current.showModal();
-    } else if (!isModalOpen && dialogRef.current) {
-      dialogRef.current.close();
+      // Small delay to ensure dialog is rendered before showing
+      setTimeout(() => {
+        if (dialogRef.current) {
+          dialogRef.current.showModal();
+        }
+      }, 0);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restore body scroll when modal is closed
+      document.body.style.overflow = 'unset';
     }
+    
+    return () => {
+      if (dialogRef.current) {
+        dialogRef.current.close();
+      }
+      document.body.style.overflow = 'unset';
+    };
   }, [isModalOpen]);
 
   const handleCreate = () => {
@@ -66,7 +81,10 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
         throw new Error(errorMessage);
       }
 
+      // Immediately refresh the list to update the UI
       await onRefresh();
+      
+      // Show deletion message (red/error style) after refresh completes
       onShowToast('API key deleted successfully', 'error');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete API key';
@@ -147,10 +165,11 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
       }
 
       await onRefresh();
+      const successMessage = editingKey ? 'API key updated successfully' : 'API key created successfully';
+      // Close modal
       setIsModalOpen(false);
       setFormData({ name: '', type: 'dev', key: '', limitMonthlyUsage: false, limit: 1000 });
       setEditingKey(null);
-      const successMessage = editingKey ? 'API key updated successfully' : 'API key created successfully';
       onShowToast(successMessage, 'success');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
@@ -394,19 +413,23 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
       )}
 
       {/* Modal */}
-      <dialog
-        ref={dialogRef}
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto border-none backdrop:bg-black/50"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        onCancel={(e) => {
-          e.preventDefault();
-          setIsModalOpen(false);
-          setFormData({ name: '', type: 'dev', key: '', limitMonthlyUsage: false, limit: 1000 });
-          setEditingKey(null);
-        }}
-      >
-        <div className="bg-white rounded-lg max-w-md w-full p-4 sm:p-6 shadow-xl animate-slide-in my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+      {isModalOpen && (
+        <dialog
+          ref={dialogRef}
+          className="fixed top-0 left-0 right-0 bottom-0 z-[9999] w-full h-full max-w-none max-h-none p-4 border-none bg-transparent backdrop:bg-black/20 backdrop:backdrop-blur-[1px] m-0 flex items-center justify-center"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          onCancel={(e) => {
+            e.preventDefault();
+            setIsModalOpen(false);
+            setFormData({ name: '', type: 'dev', key: '', limitMonthlyUsage: false, limit: 1000 });
+            setEditingKey(null);
+          }}
+        >
+        {/* Modal content - centered */}
+        <div 
+          className="bg-white rounded-xl w-full max-w-md p-4 sm:p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] max-h-[90vh] overflow-y-auto border-2 border-zinc-200 ring-4 ring-blue-500/20 mx-auto"
+        >
             <h2 id="modal-title" className="text-lg sm:text-xl font-bold text-zinc-900 mb-2">
               {editingKey ? 'Edit API Key' : 'Create a new API key'}
             </h2>
@@ -521,10 +544,16 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
               <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     setIsModalOpen(false);
                     setFormData({ name: '', type: 'dev', key: '', limitMonthlyUsage: false, limit: 1000 });
                     setEditingKey(null);
+                    // Ensure dialog is closed
+                    if (dialogRef.current) {
+                      dialogRef.current.close();
+                    }
                   }}
                   className="w-full sm:w-auto px-4 py-2 border border-zinc-300 rounded-lg text-zinc-900 hover:bg-zinc-50 transition-colors text-sm sm:text-base font-medium"
                 >
@@ -543,8 +572,9 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
                 </button>
               </div>
             </form>
-          </div>
-        </dialog>
+        </div>
+      </dialog>
+      )}
     </div>
   );
 }

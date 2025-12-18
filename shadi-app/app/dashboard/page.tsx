@@ -60,14 +60,16 @@ export default function Dashboard() {
   const makeApiRequest = async () => {
     try {
       return await fetch('/api/keys', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-    } catch (fetchError) {
-      console.error('Network error:', fetchError);
-      throw new Error('Unable to connect to the server. Please check if the development server is running.');
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+          },
+          cache: 'no-store',
+        });
+      } catch (fetchError) {
+        console.error('Network error:', fetchError);
+        throw new Error('Unable to connect to the server. Please check if the development server is running.');
     }
   };
 

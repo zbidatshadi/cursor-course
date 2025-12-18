@@ -55,31 +55,38 @@ export async function PUT(
 
     console.log('Updating with data:', updateData);
 
-    // Optimize update: select only needed columns
+    // Perform the update directly - Supabase will return 0 rows if RLS blocks it or row doesn't exist
     const { data, error } = await supabase
       .from('api_keys')
       // @ts-ignore - Supabase type inference issue with update
       .update(updateData as any)
       .eq('id', id)
-      .select('id, name, type, key, usage, created_at, limit')
-      .single();
+      .select('id, name, type, key, usage, created_at, limit');
 
     if (error) {
       console.error('Supabase error:', error);
+      // Handle the PGRST116 error specifically
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'API key not found or you do not have permission to update it' },
+          { status: 404 }
+        );
+      }
       return NextResponse.json(
         { error: `Database error: ${error.message}` },
         { status: 500 }
       );
     }
 
-    if (!data) {
+    if (!data || data.length === 0) {
+      console.error('Update returned no rows - likely RLS blocking or row does not exist');
       return NextResponse.json(
-        { error: 'API key not found' },
+        { error: 'API key not found or you do not have permission to update it' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data[0]);
   } catch (error) {
     console.error('Error updating API key:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to update API key';

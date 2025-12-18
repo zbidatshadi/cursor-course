@@ -111,7 +111,7 @@ function chunkText(text: string, maxChunkSize: number = 100000): string[] {
         chunks.push(currentChunk);
       }
       currentChunk = processLargeParagraph(paragraph, maxChunkSize, chunks);
-    } else {
+          } else {
       currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
     }
   }
@@ -303,25 +303,25 @@ export async function summarizeWithHuggingFace(
       console.warn("withStructuredOutput not supported for HuggingFace, using manual parsing:", error.message);
       
       const formattedPrompt = await prompt.format({ readme_content: readmeContent });
-      const response = await llm.invoke(formattedPrompt);
-      
-      // Parse JSON response
-      try {
+    const response = await llm.invoke(formattedPrompt);
+    
+    // Parse JSON response
+    try {
         const jsonRegex = /\{[\s\S]*\}/;
         const jsonMatch = jsonRegex.exec(response);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return summarySchema.parse(parsed);
-        }
-        throw new Error("No JSON found in response");
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return summarySchema.parse(parsed);
+      }
+      throw new Error("No JSON found in response");
       } catch (parseError: unknown) {
-        // Fallback: create a simple summary
+      // Fallback: create a simple summary
         const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
         console.warn("Failed to parse HuggingFace response:", errorMessage);
-        return {
-          summary: response.substring(0, 500),
-          cool_facts: ["Generated using Hugging Face model"]
-        };
+      return {
+        summary: response.substring(0, 500),
+        cool_facts: ["Generated using Hugging Face model"]
+      };
       }
     }
   } catch (error: any) {
