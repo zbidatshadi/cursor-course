@@ -63,7 +63,7 @@ function ProtectedContent() {
 
   if (isValidating) {
     return (
-      <div className="min-h-screen bg-white flex flex-col lg:flex-row">
+      <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
         <Sidebar />
         <div className="flex-1 overflow-auto bg-zinc-50 flex items-center justify-center lg:ml-0 pt-16 lg:pt-0">
           <div className="text-center px-4">
@@ -76,7 +76,7 @@ function ProtectedContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
       <Sidebar />
 
       {/* Main Content */}
@@ -169,9 +169,9 @@ function ProtectedContent() {
 export default function Protected() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-white flex">
+      <div className="min-h-screen bg-zinc-50 flex">
         <Sidebar />
-        <div className="flex-1 overflow-auto bg-zinc-50 flex items-center justify-center">
+        <div className="flex-1 overflow-auto bg-zinc-50 flex items-center justify-center pt-16 lg:pt-0">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-zinc-600">Loading...</p>

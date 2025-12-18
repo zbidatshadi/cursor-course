@@ -107,7 +107,7 @@ export default function Dashboard() {
   const usagePercentage = (currentPlan.credits / currentPlan.limit) * 100;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
       <Sidebar />
 
       {/* Main Content */}

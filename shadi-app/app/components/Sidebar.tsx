@@ -1,13 +1,21 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  const handleLinkClick = (href: string) => {
+    setMobileMenuOpen(false);
+    // Small delay to ensure menu closes before navigation
+    setTimeout(() => {
+      router.push(href);
+    }, 100);
+  };
 
   return (
     <>
@@ -47,7 +55,7 @@ export default function Sidebar() {
       )}
 
       {/* Sidebar */}
-      <aside className={`w-64 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 z-30 transition-transform duration-300 ${
+      <aside className={`w-64 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 z-50 transition-transform duration-300 ${
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       } fixed lg:static`}>
       {/* Logo */}
@@ -59,10 +67,10 @@ export default function Sidebar() {
       <nav className="flex-1 px-4 py-6">
         <ul className="space-y-1">
           <li>
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+            <button
+              type="button"
+              onClick={() => handleLinkClick('/dashboard')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
                 pathname === '/dashboard'
                   ? 'bg-purple-50 text-purple-600 font-medium'
                   : 'text-zinc-600 hover:bg-zinc-50'
@@ -73,7 +81,7 @@ export default function Sidebar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               <span>Overview</span>
-            </Link>
+            </button>
           </li>
           <li>
             <button
@@ -98,10 +106,10 @@ export default function Sidebar() {
             </button>
           </li>
           <li>
-            <Link
-              href="/playground"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+            <button
+              type="button"
+              onClick={() => handleLinkClick('/playground')}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm text-left focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
                 pathname === '/playground' || pathname === '/protected'
                   ? 'bg-purple-50 text-purple-600 font-medium'
                   : 'text-zinc-600 hover:bg-zinc-50'
@@ -112,7 +120,7 @@ export default function Sidebar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
               <span>API Playground</span>
-            </Link>
+            </button>
           </li>
           <li>
             <button
