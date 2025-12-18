@@ -105,24 +105,24 @@ export default function Dashboard() {
   const usagePercentage = (currentPlan.credits / currentPlan.limit) * 100;
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-zinc-50">
+      <div className="flex-1 overflow-auto bg-zinc-50 lg:ml-0">
         <ToastNotification toast={toast} onClose={() => setToast(null)} />
-        <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
-        <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4">
             <div>
-              <nav className="text-sm text-zinc-500 mb-2">
+              <nav className="text-xs sm:text-sm text-zinc-500 mb-2">
                 <Link href="/" className="hover:text-zinc-700">Pages</Link>
                 <span className="mx-2">/</span>
                 <span className="text-zinc-900">Overview</span>
               </nav>
-                <div className="flex items-center gap-3 mt-2">
-              <h1 className="text-4xl font-bold text-zinc-900">Overview</h1>
+                <div className="flex items-center gap-2 sm:gap-3 mt-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-zinc-900">Overview</h1>
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 </div>
             </div>
@@ -132,7 +132,7 @@ export default function Dashboard() {
         </div>
 
         {/* Current Plan Section */}
-        <div className="mb-8 rounded-xl p-8 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 text-white relative overflow-hidden shadow-lg">
+        <div className="mb-6 sm:mb-8 rounded-xl p-6 sm:p-8 bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 text-white relative overflow-hidden shadow-lg">
           {/* Animated background elements */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full blur-3xl animate-float"></div>
@@ -144,37 +144,37 @@ export default function Dashboard() {
                 CURRENT PLAN
               </span>
             </div>
-            <h2 className="text-3xl font-bold mb-6">{currentPlan.name}</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">{currentPlan.name}</h2>
             
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm text-white/90">API Usage</span>
-                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-xs sm:text-sm text-white/90">API Usage</span>
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="mb-2">
-                <span className="text-sm text-white/80">Monthly plan</span>
+                <span className="text-xs sm:text-sm text-white/80">Monthly plan</span>
               </div>
-              <div className="w-full bg-white/20 rounded-full h-2.5 mb-2 overflow-hidden">
+              <div className="w-full bg-white/20 rounded-full h-2 sm:h-2.5 mb-2 overflow-hidden">
                 <div 
-                  className="bg-white rounded-full h-2.5 transition-all duration-500 ease-out shadow-lg"
+                  className="bg-white rounded-full h-2 sm:h-2.5 transition-all duration-500 ease-out shadow-lg"
                   style={{ width: `${Math.min(usagePercentage, 100)}%` }}
                 ></div>
               </div>
-              <div className="text-sm text-white/90">
+              <div className="text-xs sm:text-sm text-white/90">
                 {currentPlan.credits}/{currentPlan.limit} Credits
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-white/90">Pay as you go</span>
-                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="text-xs sm:text-sm text-white/90">Pay as you go</span>
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <button className="px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg">
+              <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg w-full sm:w-auto">
                 Manage Plan
               </button>
             </div>

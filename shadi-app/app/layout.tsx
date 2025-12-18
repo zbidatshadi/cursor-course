@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   description:
     "Get instant AI-powered insights, summaries, cool facts, and track important pull requests and versions for any open source GitHub repository.",
   generator: "v0.app",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
   icons: {
     icon: [
       {

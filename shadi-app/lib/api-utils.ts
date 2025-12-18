@@ -27,7 +27,16 @@ export function createProxyFetch(): ProxyFetchFunction {
     return cachedProxyFetch;
   }
 
-  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy;
+  let proxyUrl: string | undefined;
+  if (process.env.HTTPS_PROXY) {
+    proxyUrl = process.env.HTTPS_PROXY;
+  } else if (process.env.HTTP_PROXY) {
+    proxyUrl = process.env.HTTP_PROXY;
+  } else if (process.env.https_proxy) {
+    proxyUrl = process.env.https_proxy;
+  } else if (process.env.http_proxy) {
+    proxyUrl = process.env.http_proxy;
+  }
   
   if (!proxyUrl) {
     // No proxy, use default fetch
@@ -42,7 +51,14 @@ export function createProxyFetch(): ProxyFetchFunction {
   cachedProxyFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     try {
       const fetchFn = await getUndiciFetch();
-      const urlString = typeof url === 'string' ? url : url instanceof URL ? url.toString() : (url as Request).url;
+      let urlString: string;
+      if (typeof url === 'string') {
+        urlString = url;
+      } else if (url instanceof URL) {
+        urlString = url.toString();
+      } else {
+        urlString = url.url;
+      }
       
       const response = await fetchFn(urlString, {
         ...init,
@@ -68,8 +84,16 @@ export function createProxyFetch(): ProxyFetchFunction {
     } catch (error: any) {
       // Handle redirect loop errors
       if (error.message?.includes('maxRedirects') || error.message?.includes('redirect loop')) {
+        let errorUrl: string;
+        if (typeof url === 'string') {
+          errorUrl = url;
+        } else if (url instanceof URL) {
+          errorUrl = url.toString();
+        } else {
+          errorUrl = url.url;
+        }
         throw new Error(
-          `Redirect loop detected when fetching ${typeof url === 'string' ? url : (url as Request).url}. ` +
+          `Redirect loop detected when fetching ${errorUrl}. ` +
           `This may be caused by proxy configuration or the target URL. Original error: ${error.message}`
         );
       }

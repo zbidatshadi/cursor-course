@@ -21,54 +21,54 @@ export function Hero() {
   }
 
   return (
-    <section className="relative pt-32 pb-20 px-4 overflow-hidden">
+    <section className="relative pt-24 sm:pt-28 md:pt-32 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 overflow-hidden">
       {/* Vibrant gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.98_0.02_95)] via-[oklch(0.97_0.03_95)] to-[oklch(1_0_0)]" />
       
-      {/* Animated gradient orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-[oklch(0.85_0.12_95)]/20 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-[oklch(0.8_0.14_95)]/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+      {/* Animated gradient orbs - hidden on mobile, smaller on tablet */}
+      <div className="hidden sm:block absolute top-20 left-4 sm:left-10 w-48 sm:w-72 h-48 sm:h-72 bg-[oklch(0.85_0.12_95)]/20 rounded-full blur-3xl animate-float" />
+      <div className="hidden sm:block absolute bottom-20 right-4 sm:right-10 w-64 sm:w-96 h-64 sm:h-96 bg-[oklch(0.8_0.14_95)]/15 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
       
       {/* Grid background effect */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,oklch(0.75_0.15_95)_0.03_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.75_0.15_95)_0.03_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,oklch(0.75_0.15_95)_0.03_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.75_0.15_95)_0.03_1px,transparent_1px)] bg-[size:2rem_2rem] sm:bg-[size:3rem_3rem] md:bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
 
       <div className="container relative mx-auto max-w-6xl">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border-2 border-[oklch(0.75_0.15_95)]/30 bg-gradient-to-r from-[oklch(0.85_0.12_95)]/20 to-[oklch(0.8_0.14_95)]/20 px-4 py-2 text-sm font-medium text-[oklch(0.6_0.16_95)] shadow-lg">
-            <Sparkles className="h-4 w-4 text-[oklch(0.75_0.15_95)]" />
-            <span>AI-Powered Repository Intelligence</span>
+          <div className="mb-4 sm:mb-6 inline-flex items-center gap-2 rounded-full border-2 border-[oklch(0.75_0.15_95)]/30 bg-gradient-to-r from-[oklch(0.85_0.12_95)]/20 to-[oklch(0.8_0.14_95)]/20 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-[oklch(0.6_0.16_95)] shadow-lg">
+            <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-[oklch(0.75_0.15_95)]" />
+            <span className="whitespace-nowrap">AI-Powered Repository Intelligence</span>
           </div>
 
-          <h1 className="mb-6 max-w-4xl text-5xl font-bold leading-tight text-balance text-foreground md:text-7xl">
+          <h1 className="mb-4 sm:mb-6 max-w-4xl text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight text-balance text-foreground px-2">
             Unlock Deep Insights from Any{" "}
             <span className="relative inline-block">
               <span className="relative z-10">GitHub Repository</span>
-              <span className="absolute bottom-2 left-0 right-0 h-3 bg-gradient-to-r from-[oklch(0.85_0.12_95)] to-[oklch(0.8_0.14_95)] opacity-60 -z-0" />
+              <span className="absolute bottom-1 sm:bottom-2 left-0 right-0 h-2 sm:h-3 bg-gradient-to-r from-[oklch(0.85_0.12_95)] to-[oklch(0.8_0.14_95)] opacity-60 -z-0" />
             </span>
           </h1>
 
-          <p className="mb-10 max-w-2xl text-lg text-muted-foreground text-pretty leading-relaxed md:text-xl">
+          <p className="mb-8 sm:mb-10 max-w-2xl text-base sm:text-lg md:text-xl text-muted-foreground text-pretty leading-relaxed px-4">
             Get instant AI-powered summaries, discover cool facts, track important pull requests, and monitor version
             updates across all your favorite open source projects.
           </p>
 
-          <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto px-4 sm:px-0">
             <Button 
               size="lg" 
-              className="gap-2 text-base bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] hover:from-[oklch(0.7_0.16_95)] hover:to-[oklch(0.65_0.17_95)] text-white shadow-lg shadow-[oklch(0.75_0.15_95)]/30 border-0" 
+              className="gap-2 text-sm sm:text-base w-full sm:w-auto bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] hover:from-[oklch(0.7_0.16_95)] hover:to-[oklch(0.65_0.17_95)] text-white shadow-lg shadow-[oklch(0.75_0.15_95)]/30 border-0" 
               onClick={handleStartAnalyzing}
             >
               Start Analyzing Free
               <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button size="lg" variant="outline" className="gap-2 text-base bg-white/80 backdrop-blur-sm border-2 border-[oklch(0.75_0.15_95)]/30 hover:bg-white hover:border-[oklch(0.75_0.15_95)] text-foreground" asChild>
+            <Button size="lg" variant="outline" className="gap-2 text-sm sm:text-base w-full sm:w-auto bg-white/80 backdrop-blur-sm border-2 border-[oklch(0.75_0.15_95)]/30 hover:bg-white hover:border-[oklch(0.75_0.15_95)] text-foreground" asChild>
               <Link href="#demo">Watch Demo</Link>
             </Button>
           </div>
 
-          <div className="mt-16 w-full max-w-5xl">
-            <div className="relative rounded-2xl border-2 border-[oklch(0.75_0.15_95)]/20 bg-white/60 backdrop-blur-sm p-3 shadow-2xl shadow-[oklch(0.75_0.15_95)]/10">
-              <div className="aspect-video w-full overflow-hidden rounded-xl bg-gradient-to-br from-[oklch(0.96_0.02_95)] to-[oklch(0.94_0.03_95)]">
+          <div className="mt-12 sm:mt-16 w-full max-w-5xl px-4 sm:px-0">
+            <div className="relative rounded-xl sm:rounded-2xl border-2 border-[oklch(0.75_0.15_95)]/20 bg-white/60 backdrop-blur-sm p-2 sm:p-3 shadow-2xl shadow-[oklch(0.75_0.15_95)]/10">
+              <div className="aspect-video w-full overflow-hidden rounded-lg sm:rounded-xl bg-gradient-to-br from-[oklch(0.96_0.02_95)] to-[oklch(0.94_0.03_95)]">
                 <img src="/github-repository-analysis-dashboard-with-ai-insig.jpg" alt="Dashboard Preview" className="h-full w-full object-cover" />
               </div>
             </div>

@@ -54,23 +54,23 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="py-24 px-4 bg-gradient-to-b from-[oklch(0.98_0.02_95)] to-[oklch(1_0_0)]">
+    <section id="features" className="py-12 sm:py-16 md:py-24 px-4 sm:px-6 bg-gradient-to-b from-[oklch(0.98_0.02_95)] to-[oklch(1_0_0)]">
       <div className="container mx-auto max-w-6xl">
-        <div className="mb-16 text-center">
-          <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl text-balance">
+        <div className="mb-8 sm:mb-12 md:mb-16 text-center px-2">
+          <h2 className="mb-3 sm:mb-4 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground text-balance">
             Everything You Need to Stay{" "}
             <span className="relative inline-block">
               <span className="relative z-10">Informed</span>
-              <span className="absolute bottom-1 left-0 right-0 h-2 bg-gradient-to-r from-[oklch(0.85_0.12_95)] to-[oklch(0.8_0.14_95)] opacity-50 -z-0" />
+              <span className="absolute bottom-0.5 sm:bottom-1 left-0 right-0 h-1.5 sm:h-2 bg-gradient-to-r from-[oklch(0.85_0.12_95)] to-[oklch(0.8_0.14_95)] opacity-50 -z-0" />
             </span>
           </h2>
-          <p className="text-lg text-muted-foreground text-pretty max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground text-pretty max-w-2xl mx-auto">
             Powerful features designed to help developers and teams track, analyze, and understand open source
             repositories effortlessly.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <Card
               key={feature.title}
