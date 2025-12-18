@@ -65,7 +65,7 @@ function ProtectedContent() {
     return (
       <div className="min-h-screen bg-white flex flex-col lg:flex-row">
         <Sidebar />
-        <div className="flex-1 overflow-auto bg-zinc-50 flex items-center justify-center lg:ml-0">
+        <div className="flex-1 overflow-auto bg-zinc-50 flex items-center justify-center lg:ml-0 pt-16 lg:pt-0">
           <div className="text-center px-4">
             <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-sm sm:text-base text-zinc-600">Validating API key...</p>
@@ -80,7 +80,7 @@ function ProtectedContent() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-zinc-50 lg:ml-0">
+      <div className="flex-1 overflow-auto bg-zinc-50 lg:ml-0 pt-16 lg:pt-0">
         <ToastNotification toast={toast} onClose={() => setToast(null)} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           {/* Header */}
