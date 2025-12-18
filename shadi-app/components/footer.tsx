@@ -3,13 +3,15 @@ import { GithubIcon, Twitter, Linkedin } from "lucide-react"
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-background py-12 px-4">
+    <footer className="border-t-2 border-[oklch(0.75_0.15_95)]/20 bg-gradient-to-b from-[oklch(0.99_0.01_95)] to-white py-12 px-4">
       <div className="container mx-auto max-w-6xl">
         <div className="grid gap-8 md:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center gap-2">
-              <GithubIcon className="h-6 w-6 text-accent" />
-              <span className="text-lg font-bold text-foreground">Shadi</span>
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)]">
+                <GithubIcon className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-lg font-bold bg-gradient-to-r from-[oklch(0.6_0.16_95)] to-[oklch(0.5_0.17_95)] bg-clip-text text-transparent">Shadi</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               AI-powered GitHub repository insights for developers and teams.
@@ -90,18 +92,18 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t-2 border-[oklch(0.75_0.15_95)]/20 pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground">© 2025 Shadi. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="#" className="text-muted-foreground hover:text-foreground">
+            <Link href="#" className="text-muted-foreground hover:text-[oklch(0.75_0.15_95)] transition-colors">
               <Twitter className="h-5 w-5" />
               <span className="sr-only">Twitter</span>
             </Link>
-            <Link href="#" className="text-muted-foreground hover:text-foreground">
+            <Link href="#" className="text-muted-foreground hover:text-[oklch(0.75_0.15_95)] transition-colors">
               <GithubIcon className="h-5 w-5" />
               <span className="sr-only">GitHub</span>
             </Link>
-            <Link href="#" className="text-muted-foreground hover:text-foreground">
+            <Link href="#" className="text-muted-foreground hover:text-[oklch(0.75_0.15_95)] transition-colors">
               <Linkedin className="h-5 w-5" />
               <span className="sr-only">LinkedIn</span>
             </Link>

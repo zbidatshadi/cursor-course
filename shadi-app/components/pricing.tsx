@@ -59,11 +59,15 @@ const plans = [
 
 export function Pricing() {
   return (
-    <section id="pricing" className="py-24 px-4">
+    <section id="pricing" className="py-24 px-4 bg-gradient-to-b from-[oklch(1_0_0)] to-[oklch(0.98_0.02_95)]">
       <div className="container mx-auto max-w-6xl">
         <div className="mb-16 text-center">
           <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl text-balance">
-            Simple, Transparent Pricing
+            Simple, Transparent{" "}
+            <span className="relative inline-block">
+              <span className="relative z-10">Pricing</span>
+              <span className="absolute bottom-1 left-0 right-0 h-2 bg-gradient-to-r from-[oklch(0.85_0.12_95)] to-[oklch(0.8_0.14_95)] opacity-50 -z-0" />
+            </span>
           </h2>
           <p className="text-lg text-muted-foreground text-pretty max-w-2xl mx-auto">
             Choose the perfect plan for your needs. All plans include a 14-day free trial.
@@ -71,15 +75,17 @@ export function Pricing() {
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
-          {plans.map((plan, index) => (
+          {plans.map((plan, planIndex) => (
             <Card
-              key={index}
-              className={`relative flex flex-col border-border bg-card p-8 ${
-                plan.highlighted ? "border-2 border-accent shadow-xl shadow-accent/20 scale-105" : ""
+              key={plan.name}
+              className={`relative flex flex-col border-2 p-8 transition-all hover:shadow-xl ${
+                plan.highlighted 
+                  ? "border-[oklch(0.75_0.15_95)] bg-gradient-to-br from-white to-[oklch(0.98_0.02_95)] shadow-2xl shadow-[oklch(0.75_0.15_95)]/20 scale-105" 
+                  : "border-[oklch(0.75_0.15_95)]/20 bg-white/80 backdrop-blur-sm hover:border-[oklch(0.75_0.15_95)]/40"
               }`}
             >
               {plan.highlighted && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-accent px-4 py-1 text-sm font-semibold text-accent-foreground">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] px-4 py-1 text-sm font-semibold text-white shadow-lg">
                   Most Popular
                 </div>
               )}
@@ -90,21 +96,27 @@ export function Pricing() {
               </div>
 
               <div className="mb-6">
-                <span className="text-5xl font-bold text-foreground">{plan.price}</span>
+                <span className="text-5xl font-bold bg-gradient-to-r from-[oklch(0.6_0.16_95)] to-[oklch(0.5_0.17_95)] bg-clip-text text-transparent">{plan.price}</span>
                 <span className="text-muted-foreground">/month</span>
               </div>
 
               <ul className="mb-8 flex-1 space-y-3">
-                {plan.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="flex items-start gap-3">
-                    <Check className="h-5 w-5 shrink-0 text-accent" />
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <div className="mt-0.5 rounded-full bg-gradient-to-br from-[oklch(0.85_0.12_95)] to-[oklch(0.8_0.14_95)] p-0.5">
+                      <Check className="h-4 w-4 shrink-0 text-white" />
+                    </div>
                     <span className="text-sm text-muted-foreground">{feature}</span>
                   </li>
                 ))}
               </ul>
 
               <Button 
-                className="w-full" 
+                className={`w-full ${
+                  plan.highlighted 
+                    ? "bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] hover:from-[oklch(0.7_0.16_95)] hover:to-[oklch(0.65_0.17_95)] text-white border-0 shadow-lg shadow-[oklch(0.75_0.15_95)]/30"
+                    : "bg-white border-2 border-[oklch(0.75_0.15_95)]/30 hover:border-[oklch(0.75_0.15_95)] hover:bg-[oklch(0.98_0.02_95)]"
+                }`}
                 variant={plan.highlighted ? "default" : "outline"}
                 onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
               >
