@@ -107,13 +107,13 @@ export default function Dashboard() {
   const usagePercentage = (currentPlan.credits / currentPlan.limit) * 100;
 
   return (
-    <div className="min-h-screen h-screen lg:h-auto bg-zinc-50 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto bg-zinc-50 lg:ml-0 pt-14 lg:pt-0">
+      <div className="flex-1 overflow-auto bg-zinc-50 lg:ml-0 pt-12 lg:pt-0">
         <ToastNotification toast={toast} onClose={() => setToast(null)} />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-4 lg:py-8 pb-4 sm:pb-6 lg:pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-4">
