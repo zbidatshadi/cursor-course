@@ -55,7 +55,7 @@ export default function Sidebar() {
       )}
 
       {/* Sidebar */}
-      <aside className={`w-64 bg-white border-r border-zinc-200 flex flex-col h-screen sticky top-0 z-50 transition-transform duration-300 ${
+      <aside className={`w-64 bg-white border-r border-zinc-200 flex flex-col h-screen top-0 z-50 transition-transform duration-300 ${
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       } fixed lg:static`}>
       {/* Logo */}

@@ -33,12 +33,13 @@ export default function Playground() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-zinc-50 lg:flex lg:flex-row">
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-zinc-50 lg:ml-0 pt-12 lg:pt-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="w-full lg:flex-1 lg:ml-0 bg-zinc-50">
+        <div className="pt-12 lg:pt-0">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           {/* Header */}
           <div className="mb-6 sm:mb-8">
             <div className="mb-4 sm:mb-6">
@@ -91,6 +92,7 @@ export default function Playground() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </div>
       </div>

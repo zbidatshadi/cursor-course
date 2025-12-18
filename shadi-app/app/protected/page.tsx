@@ -63,12 +63,14 @@ function ProtectedContent() {
 
   if (isValidating) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
+      <div className="min-h-screen bg-zinc-50 lg:flex lg:flex-row">
         <Sidebar />
-        <div className="flex-1 overflow-auto bg-zinc-50 flex items-center justify-center lg:ml-0 pt-12 lg:pt-0">
-          <div className="text-center px-4">
-            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-sm sm:text-base text-zinc-600">Validating API key...</p>
+        <div className="w-full lg:flex-1 lg:ml-0 bg-zinc-50 flex items-center justify-center">
+          <div className="pt-12 lg:pt-0 w-full">
+            <div className="text-center px-4">
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-sm sm:text-base text-zinc-600">Validating API key...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -76,13 +78,14 @@ function ProtectedContent() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-zinc-50 lg:flex lg:flex-row">
       <Sidebar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-zinc-50 lg:ml-0 pt-12 lg:pt-0">
-        <ToastNotification toast={toast} onClose={() => setToast(null)} />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="w-full lg:flex-1 lg:ml-0 bg-zinc-50">
+        <div className="pt-12 lg:pt-0">
+          <ToastNotification toast={toast} onClose={() => setToast(null)} />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           {/* Header */}
           <div className="mb-6 sm:mb-8">
             <div className="mb-4 sm:mb-6">
@@ -160,6 +163,7 @@ function ProtectedContent() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
@@ -169,12 +173,14 @@ function ProtectedContent() {
 export default function Protected() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-zinc-50 flex">
+      <div className="min-h-screen bg-zinc-50 lg:flex">
         <Sidebar />
-        <div className="flex-1 overflow-auto bg-zinc-50 flex items-center justify-center pt-12 lg:pt-0">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-zinc-600">Loading...</p>
+        <div className="w-full lg:flex-1 bg-zinc-50 flex items-center justify-center">
+          <div className="pt-12 lg:pt-0 w-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-zinc-600">Loading...</p>
+            </div>
           </div>
         </div>
       </div>
