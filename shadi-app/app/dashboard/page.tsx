@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 import ToastNotification from '../components/ToastNotification';
@@ -22,11 +22,82 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
+  // Use refs to track last known state for polling
+  const lastCountRef = useRef<number>(0);
+  const lastUpdateTimeRef = useRef<number>(Date.now());
+  const pollingEnabledRef = useRef<boolean>(true);
 
-  // Fetch API keys from Supabase
+  // Fetch API keys from Supabase on mount
   useEffect(() => {
     fetchApiKeys();
   }, []);
+
+  // Poll for database changes every 5 seconds when page is visible
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const pollForChanges = async () => {
+      // Only poll if page is visible and polling is enabled
+      if (document.hidden || !pollingEnabledRef.current) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/keys', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+          },
+          cache: 'no-store',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const currentCount = data.length;
+          const currentUpdateTime = data.length > 0 
+            ? new Date(data[0]?.created_at || 0).getTime()
+            : 0;
+
+          // Check if count changed or if there's a newer update
+          if (currentCount !== lastCountRef.current || currentUpdateTime > lastUpdateTimeRef.current) {
+            setApiKeys(data);
+            lastCountRef.current = currentCount;
+            lastUpdateTimeRef.current = currentUpdateTime;
+          }
+        }
+      } catch (err) {
+        // Silently fail polling errors to avoid spamming console
+        console.debug('Polling error (non-critical):', err);
+      }
+    };
+
+    // Start polling after initial load
+    intervalId = setInterval(pollForChanges, 5000); // Poll every 5 seconds
+
+    // Cleanup interval on unmount or when loading changes
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [loading]);
+
+  // Update refs when apiKeys change
+  useEffect(() => {
+    if (apiKeys.length > 0) {
+      lastCountRef.current = apiKeys.length;
+      const latestUpdateTime = new Date(apiKeys[0]?.created_at || 0).getTime();
+      if (latestUpdateTime > lastUpdateTimeRef.current) {
+        lastUpdateTimeRef.current = latestUpdateTime;
+      }
+    }
+  }, [apiKeys]);
 
   // Helper function to parse error response
   const parseErrorResponse = async (response: Response) => {
@@ -77,6 +148,8 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
+      // Temporarily disable polling during manual refresh
+      pollingEnabledRef.current = false;
       
       const response = await makeApiRequest();
       console.log('API Response status:', response.status);
@@ -90,12 +163,22 @@ export default function Dashboard() {
       
       const data = await response.json();
       setApiKeys(data);
+      
+      // Update refs with latest data
+      lastCountRef.current = data.length;
+      if (data.length > 0) {
+        lastUpdateTimeRef.current = new Date(data[0]?.created_at || 0).getTime();
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
       console.error('Error fetching API keys:', err);
     } finally {
       setLoading(false);
+      // Re-enable polling after a short delay
+      setTimeout(() => {
+        pollingEnabledRef.current = true;
+      }, 1000);
     }
   };
 
