@@ -19,6 +19,7 @@ const plans = [
     ],
     cta: "Get Started",
     highlighted: false,
+    comingSoon: false,
   },
   {
     name: "Pro",
@@ -35,7 +36,8 @@ const plans = [
       "Export reports",
     ],
     cta: "Start Free Trial",
-    highlighted: true,
+    highlighted: false,
+    comingSoon: true,
   },
   {
     name: "Enterprise",
@@ -54,6 +56,7 @@ const plans = [
     ],
     cta: "Contact Sales",
     highlighted: false,
+    comingSoon: true,
   },
 ]
 
@@ -85,8 +88,13 @@ export function Pricing() {
               }`}
             >
               {plan.highlighted && (
-                <div className="absolute -top-3 sm:-top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] px-3 sm:px-4 py-0.5 sm:py-1 text-xs sm:text-sm font-semibold text-white shadow-lg">
+                <div className="absolute -top-3 sm:-top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] px-3 sm:px-4 py-0.5 sm:py-1 text-xs sm:text-sm font-semibold text-white shadow-lg z-10">
                   Most Popular
+                </div>
+              )}
+              {plan.comingSoon && (
+                <div className="absolute -top-3 sm:-top-4 right-4 sm:right-6 rounded-full bg-gradient-to-r from-zinc-500 to-zinc-600 px-3 sm:px-4 py-0.5 sm:py-1 text-xs sm:text-sm font-semibold text-white shadow-lg z-10">
+                  Coming Soon
                 </div>
               )}
 
@@ -113,14 +121,17 @@ export function Pricing() {
 
               <Button 
                 className={`w-full ${
-                  plan.highlighted 
-                    ? "bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] hover:from-[oklch(0.7_0.16_95)] hover:to-[oklch(0.65_0.17_95)] text-white border-0 shadow-lg shadow-[oklch(0.75_0.15_95)]/30"
-                    : "bg-white border-2 border-[oklch(0.75_0.15_95)]/30 hover:border-[oklch(0.75_0.15_95)] hover:bg-[oklch(0.98_0.02_95)]"
+                  plan.comingSoon
+                    ? "bg-zinc-200 border-2 border-zinc-300 text-zinc-500 cursor-not-allowed"
+                    : plan.highlighted 
+                      ? "bg-gradient-to-r from-[oklch(0.75_0.15_95)] to-[oklch(0.7_0.16_95)] hover:from-[oklch(0.7_0.16_95)] hover:to-[oklch(0.65_0.17_95)] text-white border-0 shadow-lg shadow-[oklch(0.75_0.15_95)]/30"
+                      : "bg-white border-2 border-[oklch(0.75_0.15_95)]/30 hover:border-[oklch(0.75_0.15_95)] hover:bg-[oklch(0.98_0.02_95)]"
                 }`}
-                variant={plan.highlighted ? "default" : "outline"}
-                onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+                variant={plan.comingSoon ? "outline" : plan.highlighted ? "default" : "outline"}
+                disabled={plan.comingSoon}
+                onClick={plan.comingSoon ? undefined : () => signIn("google", { callbackUrl: "/dashboard" })}
               >
-                {plan.cta}
+                {plan.comingSoon ? "Coming Soon" : plan.cta}
               </Button>
             </Card>
           ))}
