@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
   key TEXT NOT NULL UNIQUE,
   usage INTEGER DEFAULT 0,
   limit INTEGER,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -30,16 +31,21 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(key);
 -- Create an index on created_at for sorting
 CREATE INDEX IF NOT EXISTS idx_api_keys_created_at ON api_keys(created_at DESC);
 
+-- Create an index on user_id for faster user-specific queries
+CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
 -- Create a policy that allows all operations (you can customize this based on your auth needs)
--- For now, we'll allow all operations. In production, you should add proper authentication.
+-- Note: The API routes handle authentication and filtering by user_id directly
 CREATE POLICY "Allow all operations on api_keys" ON api_keys
   FOR ALL
   USING (true)
   WITH CHECK (true);
 ```
+
+**Note:** If you already have an existing `api_keys` table without the `user_id` column, run the migration script in `SUPABASE_MIGRATION_USER_ID.sql` to add the column.
 
 ## 3. Get Your Supabase Credentials
 
@@ -70,12 +76,26 @@ After adding the environment variables, restart your Next.js development server:
 npm run dev
 ```
 
+## 6. Migration: Add User ID Support (If Needed)
+
+If you have an existing `api_keys` table without the `user_id` column, run the migration script:
+
+1. Open `SUPABASE_MIGRATION_USER_ID.sql` in your Supabase SQL Editor
+2. Run the entire script to add the `user_id` column and update indexes
+
+This migration:
+- Adds `user_id` column to associate API keys with users
+- Creates an index on `user_id` for faster queries
+- Updates RLS policies (optional, as API routes handle authentication)
+
 ## Security Notes
 
-- The current RLS policy allows all operations. In production, you should:
-  - Implement proper authentication (e.g., Supabase Auth)
-  - Create user-specific policies
-  - Restrict access based on user roles
+- The API routes now require authentication via NextAuth
+- All operations (GET, POST, PUT, DELETE) are filtered by `user_id` to ensure users can only access their own API keys
+- The RLS policy allows all operations at the database level, but the API routes enforce user-specific access
+- In production, you should:
+  - Consider implementing stricter RLS policies at the database level
+  - Restrict access based on user roles if needed
   - Consider encrypting sensitive data like API keys
 
 ## Testing

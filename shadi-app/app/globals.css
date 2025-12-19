@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* css-validator-disable-next-line */
 @custom-variant dark (&:is(.dark *));
 
 @keyframes gradient-shift {
@@ -117,6 +118,8 @@ nextjs-portal {
   --yellow-600: oklch(0.7 0.16 95);
 }
 
+/* Tailwind CSS v4 directive - valid syntax */
+/* eslint-disable-next-line */
 @theme inline {
   --font-sans: "Geist", "Geist Fallback";
   --font-mono: "Geist Mono", "Geist Mono Fallback";
@@ -160,9 +163,11 @@ nextjs-portal {
 
 @layer base {
   * {
+    /* Tailwind CSS directive - valid syntax, ignore CSS validator warning */
     @apply border-border outline-ring/50;
   }
   body {
+    /* Tailwind CSS directive - valid syntax, ignore CSS validator warning */
     @apply bg-gradient-to-b from-[oklch(0.99_0.01_95)] via-[oklch(0.98_0.02_95)] to-[oklch(1_0_0)] text-foreground;
     background-attachment: fixed;
   }

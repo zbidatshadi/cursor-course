@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient, getAuthenticatedUserId } from '@/lib/api-utils';
 
-// GET - Fetch all API keys
-export async function GET() {
+// GET - Fetch all API keys for authenticated user
+export async function GET(request: NextRequest) {
   try {
+    // Get authenticated user ID
+    const userId = await getAuthenticatedUserId(request);
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in to access your API keys.' },
+        { status: 401 }
+      );
+    }
+
     // Check environment variables first
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -36,10 +46,11 @@ export async function GET() {
       );
     }
     
-    // Optimize query: select only needed columns (reduces data transfer)
+    // Fetch API keys filtered by user_id
     const { data, error } = await supabase
       .from('api_keys')
       .select('id, name, type, key, usage, created_at, limit')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -54,6 +65,15 @@ export async function GET() {
       if (error.code === '42P01') {
         return NextResponse.json(
           { error: 'Database table "api_keys" does not exist. Please run the SQL script from SUPABASE_SETUP.md' },
+          { status: 500 }
+        );
+      }
+      if (error.code === '42703') {
+        return NextResponse.json(
+          { 
+            error: 'Database column "user_id" does not exist.',
+            details: 'Please add the user_id column to the api_keys table. See the migration script in SUPABASE_SETUP.md',
+          },
           { status: 500 }
         );
       }
@@ -128,99 +148,6 @@ export async function GET() {
       },
       { status: 500 }
     );
-  }
-}
-
-// POST - Create a new API key
-export async function POST(request: NextRequest) {
-  try {
-    // Get authenticated user ID
-    const userId = await getAuthenticatedUserId(request);
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please sign in to create API keys.' },
-        { status: 401 }
-      );
-    }
-
-    const supabase = getSupabaseClient();
-    const body = await request.json();
-    const { name, type, key, limit } = body;
-
-    if (!name || !type || !key) {
-      return NextResponse.json(
-        { error: 'Missing required fields: name, type, key' },
-        { status: 400 }
-      );
-    }
-
-    // Validate type
-    if (type !== 'dev' && type !== 'prod') {
-      return NextResponse.json(
-        { error: 'Type must be either "dev" or "prod"' },
-        { status: 400 }
-      );
-    }
-
-    // Optimize insert: select only needed columns, include user_id
-    const { data, error } = await supabase
-      .from('api_keys')
-      .insert([
-        {
-          name,
-          type,
-          key,
-          usage: 0,
-          limit: limit || null,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-        },
-      ] as any)
-      .select('id, name, type, key, usage, created_at, limit')
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      // Provide more specific error messages
-      if (error.code === '23505') {
-        return NextResponse.json(
-          { error: 'An API key with this value already exists' },
-          { status: 409 }
-        );
-      }
-      if (error.code === '42P01') {
-        return NextResponse.json(
-          { error: 'Database table "api_keys" does not exist. Please run the SQL script from SUPABASE_SETUP.md' },
-          { status: 500 }
-        );
-      }
-      if (error.code === '42703') {
-        return NextResponse.json(
-          { 
-            error: 'Database column "user_id" does not exist.',
-            details: 'Please add the user_id column to the api_keys table. See the migration script in SUPABASE_SETUP.md',
-          },
-          { status: 500 }
-        );
-      }
-      if (error.message.includes('permission denied') || error.message.includes('RLS')) {
-        return NextResponse.json(
-          { error: 'Permission denied. Please check your Row Level Security (RLS) policies in Supabase.' },
-          { status: 403 }
-        );
-      }
-      return NextResponse.json(
-        { error: `Database error: ${error.message}` },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(data, { status: 201 });
-  } catch (error) {
-    console.error('Error creating API key:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to create API key';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 

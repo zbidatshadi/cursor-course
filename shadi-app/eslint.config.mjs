@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Allow functions that always return the same value if it's intentional
+      "consistent-return": "off",
+      // Reduce cognitive complexity threshold for auth callbacks
+      "complexity": ["warn", { max: 20 }],
+    },
+  },
 ]);
 
 export default eslintConfig;

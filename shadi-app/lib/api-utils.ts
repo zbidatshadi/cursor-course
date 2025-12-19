@@ -175,3 +175,132 @@ export const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
 };
 
+/**
+ * Get authenticated user ID from NextAuth session
+ * Returns the user ID from Supabase by looking up the email from JWT
+ * @param request - NextRequest object (required for App Router)
+ */
+export async function getAuthenticatedUserId(request: { headers: Headers }): Promise<string | null> {
+  try {
+    const nextAuthJwt = await import('next-auth/jwt');
+    const { authOptions } = await import('@/app/api/auth/[...nextauth]/route');
+    const { decode } = nextAuthJwt;
+    
+    // Get cookies from request headers
+    const cookieHeader = request.headers.get('cookie') || '';
+    
+    // Log for debugging
+    if (!cookieHeader) {
+      console.log('[Auth] No cookies found in request headers');
+      return null;
+    }
+    
+    console.log('[Auth] Cookie header received, length:', cookieHeader.length);
+    
+    // Parse cookies to see what we have
+    const cookies: Record<string, string> = {};
+    cookieHeader.split(';').forEach(cookie => {
+      const [key, ...valueParts] = cookie.trim().split('=');
+      if (key && valueParts.length > 0) {
+        cookies[key] = decodeURIComponent(valueParts.join('='));
+      }
+    });
+    
+    // Check for NextAuth session cookies
+    const hasNextAuthCookie = Object.keys(cookies).some(key => 
+      key.includes('next-auth') || key.includes('authjs')
+    );
+    
+    console.log('[Auth] Cookie keys found:', Object.keys(cookies));
+    console.log('[Auth] Has NextAuth cookie:', hasNextAuthCookie);
+    
+    if (!hasNextAuthCookie) {
+      console.log('[Auth] No NextAuth session cookie found. User may not be signed in.');
+      console.log('[Auth] Available cookies:', Object.keys(cookies).join(', '));
+      return null;
+    }
+    
+    // Get secret - must match exactly what's in authOptions
+    const secret = authOptions.secret || process.env.NEXTAUTH_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'development-secret-change-in-production');
+    if (!secret) {
+      console.error('[Auth] NEXTAUTH_SECRET is not set and no fallback available');
+      return null;
+    }
+    
+    console.log('[Auth] Attempting to decode session token...');
+    
+    try {
+      // Get the session token from cookies
+      const sessionToken = cookies['next-auth.session-token'] || cookies['__Secure-next-auth.session-token'];
+      
+      if (!sessionToken) {
+        console.log('[Auth] No session token found in cookies');
+        return null;
+      }
+      
+      console.log('[Auth] Session token found, attempting to decode...');
+      
+      // Use decode to decrypt the encrypted JWT token
+      const token = await decode({
+        token: sessionToken,
+        secret: secret,
+      });
+      
+      if (!token) {
+        console.log('[Auth] Failed to decode token');
+        return null;
+      }
+      
+      console.log('[Auth] ✓ Token decoded successfully!');
+      console.log('[Auth] Token found, keys:', Object.keys(token));
+      console.log('[Auth] Token sub (user ID):', token.sub);
+      
+      // Get email from token
+      const email = token.email;
+      
+      if (!email) {
+        console.log('[Auth] Token found but no email. Token keys:', Object.keys(token));
+        console.log('[Auth] User may need to sign out and sign in again to get email in token');
+        return null;
+      }
+
+      console.log('[Auth] Email from token:', email);
+
+      // Look up user in Supabase by email
+      const supabase = getSupabaseClient();
+      const { data: user, error } = await (supabase
+        .from('users' as any)
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()) as { data: any; error: any };
+
+      if (error) {
+        console.error('[Auth] Error looking up user in Supabase:', error);
+        return null;
+      }
+
+      if (!user) {
+        console.log('[Auth] User not found in Supabase for email:', email);
+        console.log('[Auth] This means the user was not created during sign-in. They need to sign in again.');
+        return null;
+      }
+
+      console.log('[Auth] Successfully authenticated user:', user.id);
+      return user.id;
+    } catch (error) {
+      console.error('[Auth] Error decoding token:', error);
+      if (error instanceof Error) {
+        console.error('[Auth] Error message:', error.message);
+        console.error('[Auth] Error stack:', error.stack);
+      }
+      return null;
+    }
+  } catch (error) {
+    console.error('[Auth] Error getting authenticated user:', error);
+    if (error instanceof Error) {
+      console.error('[Auth] Error details:', error.message, error.stack);
+    }
+    return null;
+  }
+}
+

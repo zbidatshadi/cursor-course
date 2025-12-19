@@ -73,6 +73,7 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
     try {
       const response = await fetch(`/api/keys/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -107,6 +108,7 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         name: formData.name,
         type: formData.type,
@@ -128,6 +130,7 @@ export default function ApiKeysCrud({ apiKeys, loading, error, onRefresh, onShow
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         name: formData.name,
         type: formData.type,

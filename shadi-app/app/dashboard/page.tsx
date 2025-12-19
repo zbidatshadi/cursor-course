@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import ToastNotification from '../components/ToastNotification';
 import ApiKeysCrud from '../components/ApiKeysCrud';
@@ -17,6 +19,8 @@ interface ApiKey {
 }
 
 export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [currentPlan] = useState({ name: 'Researcher', credits: 0, limit: 1000 });
   const [loading, setLoading] = useState(true);
@@ -28,10 +32,25 @@ export default function Dashboard() {
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const pollingEnabledRef = useRef<boolean>(true);
 
-  // Fetch API keys from Supabase on mount
+  // Redirect if not authenticated
   useEffect(() => {
-    fetchApiKeys();
-  }, []);
+    if (status === 'unauthenticated') {
+      console.log('[Dashboard] User is not authenticated, redirecting to home');
+      router.push('/');
+    }
+  }, [status, router]);
+
+  // Fetch API keys from Supabase on mount (only if authenticated)
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      console.log('[Dashboard] User is authenticated, fetching API keys. Email:', session.user?.email);
+      fetchApiKeys();
+    } else if (status === 'loading') {
+      console.log('[Dashboard] Session status is loading...');
+    } else {
+      console.log('[Dashboard] Session status:', status, 'Session:', session ? 'exists' : 'null');
+    }
+  }, [status, session]);
 
   // Poll for database changes every 5 seconds when page is visible
   useEffect(() => {
@@ -48,12 +67,13 @@ export default function Dashboard() {
       }
 
       try {
-        const response = await fetch('/api/keys', {
+        const response = await fetch('/api/keys/list', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache',
           },
+          credentials: 'include',
           cache: 'no-store',
         });
 
@@ -130,12 +150,13 @@ export default function Dashboard() {
   // Helper function to make API request
   const makeApiRequest = async () => {
     try {
-      return await fetch('/api/keys', {
+      return await fetch('/api/keys/list', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache',
           },
+          credentials: 'include',
           cache: 'no-store',
         });
       } catch (fetchError) {
@@ -145,6 +166,13 @@ export default function Dashboard() {
   };
 
   const fetchApiKeys = async () => {
+    // Don't fetch if not authenticated
+    if (status !== 'authenticated' || !session) {
+      console.log('Not authenticated, skipping API call');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -153,12 +181,20 @@ export default function Dashboard() {
       
       const response = await makeApiRequest();
       console.log('API Response status:', response.status);
+      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorData = await parseErrorResponse(response);
         const errorMessage = buildErrorMessage(errorData, response.status);
         console.error('API Error:', errorMessage);
-        throw new Error(errorMessage);
+        
+        // If unauthorized, check if session is still valid
+        if (response.status === 401) {
+          console.error('401 Unauthorized - Session may have expired. Please sign in again.');
+          setError('Your session has expired. Please sign in again.');
+        } else {
+          throw new Error(errorMessage);
+        }
       }
       
       const data = await response.json();
