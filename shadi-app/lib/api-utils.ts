@@ -304,3 +304,122 @@ export async function getAuthenticatedUserId(request: { headers: Headers }): Pro
   }
 }
 
+/**
+ * Check if API key has exceeded its rate limit
+ * @param supabase - Supabase client instance
+ * @param apiKey - The API key string
+ * @returns Object with isRateLimited (boolean) and current usage data, or error response
+ */
+export async function checkRateLimit(
+  supabase: ReturnType<typeof createClient>,
+  apiKey: string
+): Promise<{ isRateLimited: boolean; usage: number; limit: number | null; keyId: string } | { error: string; status: number }> {
+  try {
+    // Fetch API key with usage and limit
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select('id, usage, limit')
+      .eq('key', apiKey)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('[RateLimit] API key not found in database');
+        return { error: 'Invalid API key', status: 401 };
+      }
+      console.error('[RateLimit] Error fetching API key:', error.message);
+      return { error: 'Database error', status: 500 };
+    }
+
+    if (!data) {
+      console.log('[RateLimit] No data returned for API key');
+      return { error: 'Invalid API key', status: 401 };
+    }
+
+    const apiKeyData = data as { id: string; usage: number | null; limit: number | null };
+    const usage = apiKeyData.usage || 0;
+    const limit = apiKeyData.limit;
+    const keyId = apiKeyData.id;
+
+    // If limit is null, there's no rate limit (unlimited)
+    if (limit === null) {
+      return { isRateLimited: false, usage, limit: null, keyId };
+    }
+
+    // Check if usage has reached or exceeded the limit
+    const isRateLimited = usage >= limit;
+    return { isRateLimited, usage, limit, keyId };
+  } catch (error) {
+    console.error('[RateLimit] Unexpected error:', error);
+    if (error instanceof Error) {
+      console.error('[RateLimit] Error message:', error.message);
+      console.error('[RateLimit] Error stack:', error.stack);
+    }
+    return { error: 'Internal server error', status: 500 };
+  }
+}
+
+/**
+ * Increment the usage count for an API key
+ * @param supabase - Supabase client instance
+ * @param keyId - The API key ID (UUID)
+ * @returns Success boolean or error response
+ */
+export async function incrementApiKeyUsage(
+  supabase: ReturnType<typeof createClient>,
+  keyId: string
+): Promise<{ success: boolean } | { error: string; status: number }> {
+  try {
+    // First, get current usage to increment it
+    const { data: currentData, error: fetchError } = await supabase
+      .from('api_keys')
+      .select('usage, key')
+      .eq('id', keyId)
+      .single();
+
+    if (fetchError) {
+      console.error('[RateLimit] Error fetching current usage:', fetchError.message);
+      return { error: 'Failed to fetch API key usage', status: 500 };
+    }
+
+    if (!currentData) {
+      console.error('[RateLimit] No data returned for key ID:', keyId);
+      return { error: 'API key not found', status: 404 };
+    }
+
+    const usageData = currentData as { usage: number | null; key: string };
+    const currentUsage = usageData.usage || 0;
+    const newUsage = currentUsage + 1;
+
+    // Update usage atomically
+    const { data: updateData, error: updateError } = await supabase
+      .from('api_keys')
+      // @ts-ignore - Supabase type inference issue with update
+      .update({ 
+        usage: newUsage,
+        updated_at: new Date().toISOString()
+      } as any)
+      .eq('id', keyId)
+      .select('id, usage');
+
+    if (updateError) {
+      console.error('[RateLimit] Error incrementing usage:', updateError.message);
+      return { error: 'Failed to increment API key usage', status: 500 };
+    }
+
+    if (updateData && updateData.length > 0) {
+      return { success: true };
+    } else {
+      console.error('[RateLimit] Update succeeded but no data returned');
+      return { error: 'Update succeeded but verification failed', status: 500 };
+    }
+  } catch (error) {
+    console.error('[RateLimit] Unexpected error incrementing usage:', error);
+    if (error instanceof Error) {
+      console.error('[RateLimit] Error message:', error.message);
+      console.error('[RateLimit] Error stack:', error.stack);
+    }
+    return { error: 'Internal server error', status: 500 };
+  }
+}
+

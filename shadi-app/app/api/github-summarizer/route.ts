@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { summarizeReadme } from './chain';
-import { createProxyFetch, getSupabaseClient, corsHeaders, type ProxyFetchFunction } from '@/lib/api-utils';
+import { createProxyFetch, getSupabaseClient, corsHeaders, type ProxyFetchFunction, checkRateLimit, incrementApiKeyUsage } from '@/lib/api-utils';
 
 // Handle OPTIONS request for CORS preflight
 export async function OPTIONS() {
@@ -393,17 +393,18 @@ function logFailureAndReturn(
   return errorResponse;
 }
 
-// Helper to validate API key from request
+// Helper to validate API key from request and check rate limits
 async function validateRequestApiKey(
   request: NextRequest,
   supabase: ReturnType<typeof createClient>,
   startTime: number
-): Promise<{ data: any; error: NextResponse | null }> {
+): Promise<{ data: any; keyId: string | null; error: NextResponse | null }> {
   const key = getApiKeyFromHeaders(request);
   if (!key) {
     console.log('API key missing from request headers');
     return {
       data: null,
+      keyId: null,
       error: NextResponse.json(
         {
           error: 'API key is required',
@@ -421,12 +422,52 @@ async function validateRequestApiKey(
   if (validationError) {
     return {
       data: null,
+      keyId: null,
       error: logFailureAndReturn('Request failed: API key validation error', Date.now() - startTime, validationError)
     };
   }
 
   console.log('API key validated successfully');
-  return { data, error: null };
+
+  // Check rate limits before processing
+  const rateLimitResult = await checkRateLimit(supabase, key);
+  
+  // Handle rate limit errors
+  if ('error' in rateLimitResult) {
+    return {
+      data: null,
+      keyId: null,
+      error: NextResponse.json(
+        {
+          error: rateLimitResult.error,
+          valid: false
+        },
+        { status: rateLimitResult.status, headers: corsHeaders }
+      )
+    };
+  }
+
+  // Check if rate limit is exceeded
+  if (rateLimitResult.isRateLimited) {
+    console.log(`[RateLimit] Rate limit exceeded: usage ${rateLimitResult.usage} >= limit ${rateLimitResult.limit}`);
+    return {
+      data: null,
+      keyId: null,
+      error: NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          message: `API key has reached its usage limit. Usage: ${rateLimitResult.usage}/${rateLimitResult.limit}`,
+          usage: rateLimitResult.usage,
+          limit: rateLimitResult.limit,
+          valid: false
+        },
+        { status: 429, headers: corsHeaders }
+      )
+    };
+  }
+
+  console.log(`[RateLimit] Rate limit check passed: usage ${rateLimitResult.usage}/${rateLimitResult.limit ?? 'unlimited'}`);
+  return { data, keyId: rateLimitResult.keyId, error: null };
 }
 
 // Helper to process GitHub URL and get raw URL
@@ -542,20 +583,32 @@ interface ResponseData {
 }
 
 // Helper to build success response
-function buildSuccessResponse(data: ResponseData): NextResponse {
+function buildSuccessResponse(data: ResponseData, usageIncremented: boolean = false): NextResponse {
   const statusCode = data.summary ? 200 : 502;
   const duration = Date.now() - data.startTime;
   
   console.log(`Request completed successfully (${duration}ms)`);
   console.log(`Response status: ${statusCode}`);
+  console.log(`Usage incremented: ${usageIncremented}`);
   console.log('='.repeat(80));
+
+  const responseHeaders = {
+    ...corsHeaders,
+    'X-Usage-Incremented': usageIncremented ? 'true' : 'false',
+    'X-API-Key-ID': data.keyData?.id || 'unknown'
+  };
 
   return NextResponse.json(
     {
       summary: data.summary?.summary || null,
-      cool_facts: data.summary?.cool_facts || null
+      cool_facts: data.summary?.cool_facts || null,
+      _debug: {
+        usageIncremented,
+        apiKeyId: data.keyData?.id,
+        currentUsage: data.keyData?.usage
+      }
     },
-    { status: statusCode, headers: corsHeaders }
+    { status: statusCode, headers: responseHeaders }
   );
 }
 
@@ -563,16 +616,18 @@ function buildSuccessResponse(data: ResponseData): NextResponse {
 export async function POST(request: NextRequest) {
   logRequestStart(request);
   const startTime = Date.now();
+  let apiKeyId: string | null = null;
   
   try {
     const supabase = getSupabaseClient();
     const proxyFetch = createProxyFetch();
 
-    // Validate API key
-    const { data, error: keyError } = await validateRequestApiKey(request, supabase, startTime);
+    // Validate API key and check rate limits
+    const { data, keyId, error: keyError } = await validateRequestApiKey(request, supabase, startTime);
     if (keyError) {
       return keyError;
     }
+    apiKeyId = keyId;
 
     // Parse and validate request body
     const { githubUrl, error: bodyError } = await parseRequestBody(request);
@@ -595,11 +650,29 @@ export async function POST(request: NextRequest) {
       proxyFetch,
       startTime
     );
+    
+    // IMPORTANT: Increment API key usage BEFORE returning any errors
+    // This ensures usage is tracked even if summary generation fails
+    // We increment as long as we got past rate limit check (API was called)
+    let usageIncremented = false;
+    if (apiKeyId) {
+      try {
+        const incrementResult = await incrementApiKeyUsage(supabase, apiKeyId);
+        if ('error' in incrementResult) {
+          console.error('[RateLimit] Failed to increment usage:', incrementResult.error);
+        } else {
+          usageIncremented = true;
+        }
+      } catch (incrementError) {
+        console.error('[RateLimit] Exception during increment:', incrementError);
+      }
+    }
+    
+    // Now return error if fetch failed (but usage was already incremented)
     if (fetchError) {
       return fetchError;
     }
-
-    // Build and return success response
+    
     return buildSuccessResponse({
       githubUrl,
       rawUrl: rawUrl!,
@@ -609,7 +682,7 @@ export async function POST(request: NextRequest) {
       githubContentError,
       keyData: data,
       startTime
-    });
+    }, usageIncremented);
 
   } catch (error) {
     const duration = Date.now() - startTime;
